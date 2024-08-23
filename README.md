@@ -2,7 +2,7 @@
 
 Finds current trendlines based on OHLC (Open, High, Low, Close) data. Given an OHLC dataset, the program determines all relevant trendlines at the closing price of the most recent candle.
 
- ![Alt text](https://www.dropbox.com/scl/fi/fe459xkw4chq0d4y5ru2t/Screenshot-2024-08-23-at-20.49.17.jpg?rlkey=dt06439zgafp11ye5ficbip61&st=urzurwru&dl=0)
+ ![Alt text](https://www.dropbox.com/scl/fi/fe459xkw4chq0d4y5ru2t/Screenshot-2024-08-23-at-20.49.17.jpg?rlkey=dt06439zgafp11ye5ficbip61&st=pd1l2q2y&dl=0)
 
 
 ## Features
