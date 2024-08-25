@@ -5,12 +5,95 @@ import datetime
 import os
 from pathlib import Path
 
+csv_file_path = '/content/XRPUSDT_OHLCV_1D.csv'
 
-# ПРЕОБРАЗОВАНИЕ OTOHLCVCC-ДАТАФРЕЙМА В NP.ARRAY
-def convert_df_to_array(otohlcvcc_df):
-    tohlcvcc_df = otohlcvcc_df.drop(otohlcvcc_df.columns[0], axis=1) # удаление столбца 'open_time'
+df = pd.read_csv(csv_file_path, header = None, names = ('timestamp', 'open', 'high', 'low', 'close', 'volume'))
+
+df['open_time'] = pd.to_datetime(df['timestamp'], unit='ms')
+df['candle_type'] = df.apply(lambda x: 1 if x['open'] <= x['close'] else 0, axis = 1)
+df.reset_index(inplace = True, names = 'candle_id')
+new_columns_order = ['open_time', 'timestamp', 'open', 'high', 'low', 'close', 'volume', 'candle_type', 'candle_id']
+otohlcvcc_df = df[new_columns_order]
+
+# преобразование otohlcvcc_df в np.array
+def convert_df_to_array(df):
+    tohlcvcc_df = df.drop(df.columns[0], axis=1) # удаление столбца 'open_time'
     array = tohlcvcc_df.values
     return array
+
+tohlcvcc_array = convert_df_to_array (otohlcvcc_df)
+
+
+def find_trend_periods(otohlcvcc_df): 
+
+    lendata = otohlcvcc_df.shape[0]  # длина остаточного интервала (изначально - длина вхдящего датафрейма)
+
+    df_vs_turn_points = otohlcvcc_df.copy()
+
+    # Определение типа первого глобального экстремума: ('max') / ('min')
+    high_id = df_vs_turn_points.high.idxmax()  # индекс первого глобального максимума (максимум на всем интервале изначального df)
+    low_id = df_vs_turn_points.low.idxmin()  # индекс первого глобального минимума (минимум на всем интервале изначального df)
+
+    extremum = min(high_id, low_id)  # первый глобальный экстремум - тот, чей индекс меньше
+    entry = df_vs_turn_points.loc[extremum].copy()  # строка исходного датафрейма по найденному индексу первого глобального экстремума
+    delta = lendata - extremum # длина оставшегося диапазона индексов от предыдущего глобального экстремума до конца остаточного интервала (критерий окончания поисков: delta<=2)
+
+    trend_periods_up = []
+    trend_periods_down = []
+
+    while (lendata - extremum) > 2:
+
+        if extremum == high_id:  # Текущий экстремум - максимум
+            # Нахождение следующего минимума после текущего максимума
+            next_extremum = df_vs_turn_points.low.iloc[extremum + 1:lendata].idxmin()
+            entry_type = 'min'
+            trend_period = (high_id, next_extremum)
+            
+            # Обновление low_id
+            low_id = next_extremum
+            
+        else:  # Текущий экстремум - минимум
+            # Нахождение следующего максимума после текущего минимума
+            next_extremum = df_vs_turn_points.high.iloc[extremum + 1:lendata].idxmax()
+            entry_type = 'max'
+            trend_period = (low_id, next_extremum)
+            
+            # Обновление high_id
+            high_id = next_extremum
+
+        # Обновление данных для следующего цикла
+        extremum = next_extremum
+        delta = lendata - extremum
+
+        # Добавление трендового периода, если длина интервала больше или равна 3
+        if len(range(trend_period[0], trend_period[1])) >= 3:
+            if entry_type == 'max':
+                trend_periods_up.append(trend_period)
+            else:
+                trend_periods_down.append(trend_period)
+
+    # Формирование результирующего DataFrame
+    trend_periods = [('up', period) for period in trend_periods_up] + [('down', period) for period in trend_periods_down]
+    
+    trend_periods_data = []
+    for trend_type, period in trend_periods:
+        start_period, end_period = period
+        start_time = otohlcvcc_df.loc[start_period, 'open_time'].date()
+        end_time = otohlcvcc_df.loc[end_period, 'open_time'].date()
+        time_range = (start_time, end_time)
+        if trend_type == 'up':
+            price_range = (otohlcvcc_df.loc[start_period, 'low'], otohlcvcc_df.loc[end_period, 'high'])
+        else:
+            price_range = (otohlcvcc_df.loc[start_period, 'high'], otohlcvcc_df.loc[end_period, 'low'])
+        trend_periods_data.append([trend_type, period, time_range, price_range])
+
+    trend_periods_df = pd.DataFrame(trend_periods_data, columns=['up/down', 'index_range', 'time_range', 'price_range'])
+
+    return trend_periods_df
+
+
+
+
 
 
 # ПРЕОБРАЗОВАНИЕ NP.ARRAY в OTOHLCVCC-ДАТАФРЕЙМ
