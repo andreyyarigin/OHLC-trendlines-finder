@@ -24,13 +24,14 @@ Uptrend/downtrend lines are rays constructed from the minima/maxima of candles w
 
 ### Constructing Trendlines
 
-A trendline is a ray constructed from two highs of candles (for a downtrend line) or two lows of candles (for an uptrend line). The construction process follows these conditions:
-* The first candle is an extremum.
+A trendline is a ray constructed from two HIGHs of candles (for a downtrend line) or two LOWs of candles (for an uptrend line). 
+The construction process follows these conditions (for UPtrendline):
+* The first candle is an extremum (MIN).
 * The second candle is the one immediately following the first.
-* The low of the second candle is higher than the low of the first candle.
-* On the segment following the second candle, the high of the second candle was exceeded (updated) before the low of the first candle was updated.
+* The LOW of the second candle is higher than the LOW of the first candle.
+* On the segment following the second candle, the HIGH of the second candle was exceeded (updated) before the LOW of the first candle was updated.
 
-If these conditions are met, the *uptrendline can be drawn from the lows of candles on this segment such that no other candles intersect between the first and second points*.
+If these conditions are met, the *uptrendline can be drawn from the LOWs of candles on this segment such that no other candles intersect between the first and second points*.
 
 The minimum number of candles required to determine a trendline is 3 (provided that 3[high] > 2[high]).
 
