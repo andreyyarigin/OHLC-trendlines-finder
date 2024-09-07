@@ -1,18 +1,17 @@
 # OHLC Trendlines Finder
-It is quite common to see stock market charts with "trendlines" that are not actually trendlines. For novice traders, who often perceive various patterns on the charts (such as "diamond", "head-and-shoulders", "teacup" and other patterns that might eventually play out), it is easy to connect some extreme points on the chart and label it as a "trendline".
 
-In this project, I explain what **Correct Trendlines** are and provide Python code for identifying correct trendlines in OHLC data.
+In this project, I explain what **Correct Trendline** is and provide Python code for identifying correct trendlines in OHLC data.
 
 ![Screenshot 2024-08-23 at 20 49 17](https://github.com/user-attachments/assets/aad153fb-ca31-436a-8be0-e02163bb6f75)
 
-## Rules for identifying true trends and constructing correct trendlines
+## Rules for identifying _true trends_ and constructing _correct trendlines_
 
 ### Constructing Trend Intervals
 
 A *Trend* is a tendency of directional change. 
 In the context of describing price movement using OHLC data, a trend is defined by a *Trend interval*.
 
-A trend interval is the segment between two adjacent *Global Extrema*.  Global extrema are the absolute maximum and minimum within the considered segment. The segment between them is the trend interval. The direction of the trend interval is determined by which extremum comes first: maximum (MAX) or minimum (MIN).
+A trend interval is the segment between two adjacent *Global Extrema*.  Global extrema are the absolute maximum and minimum within the considered segment. The segment between them is the _trend interval_. The direction of the trend interval is determined by which extremum comes first: maximum (MAX) or minimum (MIN).
 
 If the first global extremum is MAX, then the first trend interval is a downtrend interval. It continues until the absolute minimum (MIN). The next trend interval is an uptrend interval and lasts until the following global maximum (MAX) on the remaining segment.
 
