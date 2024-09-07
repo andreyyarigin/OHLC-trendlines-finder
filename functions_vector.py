@@ -1,82 +1,80 @@
-## Векторный вариант только для трендовых линий (трендовые интервалы находятся классическим способом)
-
-
-def find_trend_intervals(otohlcvcc_df):
+def find_trend_intervals (tohlcvcc_array):
     """
     Находит все восходящие и нисходящие трендовые интервалы
 
     Аргументы:
-    otohlcvcc_df (pandas DataFrame) - датафрейм с обогащенными OHLC данными
+    tohlcvcc_array (np.array) - массив с данными по столбцам [time, open, high, low, close, volume, candle_type, candle_index]
 
     Возвращает:
-    trend_intervals_df (pandas DataFrame) - перечень трендовых интервалов
+    trend_intervals_list (list) - список трендовых интервалов в формате [[список восходящих трендовых интервалов],[список нисходящих трендовых интервалов]]
     """
 
-    lendata = otohlcvcc_df.shape[0]  # длина (количество свечей) остаточного интервала (изначально - длина вхдящего датафрейма)
-    df_vs_turn_points = otohlcvcc_df.copy()
+    array = tohlcvcc_array[:, (0, 2, 3, 7)]
 
-    # Определение типа первого глобального экстремума: ('max') / ('min')
-    high_id = df_vs_turn_points.high.idxmax()  # индекс первого глобального максимума (максимум на всем интервале изначального df)
-    low_id = df_vs_turn_points.low.idxmin()  # индекс первого глобального минимума (минимум на всем интервале изначального df)
+    array_lenght = array.shape[0]
 
-    extremum = min(high_id, low_id)  # первый глобальный экстремум - тот, чей индекс меньше
+    delta = array_lenght
 
-    entry = df_vs_turn_points.loc[extremum].copy()  # строка исходного датафрейма по найденному индексу первого глобального экстремума
+    min_max_index_list = []
+    min_max_type_list = []
 
-    delta = lendata - extremum # длина оставшегося диапазона индексов от предыдущего глобального экстремума до конца остаточного интервала (критерий окончания поисков: delta<=2)
 
-    trend_intervals_up = []
-    trend_intervals_down = []
+    high_idx = np.argmax(array[:, 1])  # индекс первого глобального максимума
+    low_idx = np.argmin(array[:, 2])  # индекс первого глобального минимума
 
-    while (lendata - extremum) > 2:
+    extremum = min(high_idx, low_idx)  # первый глобальный экстремум
 
-        if extremum == high_id:  # Текущий экстремум - максимум
+    while delta > 2:
+
+        if extremum == high_idx:  # Если текущий экстремум - максимум
+
+            extremum_idx = int(array[extremum, 3])   # индекс свечи
+            min_max_index_list.append(extremum_idx) # добавили индекс свечи-экстремума в список индексов
+            min_max_type_list.append(1) # добавили тип экстремума
+
             # Нахождение следующего минимума после текущего максимума
-            next_extremum = df_vs_turn_points.low.iloc[extremum + 1:lendata].idxmin()
-            entry_type = 'min'
-            trend_interval = (high_id, next_extremum)
+            low_idx_pre = np.argmin(array[extremum_idx + 1:, 2]) + 1 # индекс следующего глобального минимума на остаточном массиве
 
-            # Обновление low_id
-            low_id = next_extremum
+            low_idx = extremum_idx + low_idx_pre # корректировка индекса
+
+            extremum = low_idx
 
         else:  # Текущий экстремум - минимум
+
+            extremum_idx = int(array[extremum, 3])  # индекс свечи
+            min_max_index_list.append(extremum_idx)
+            min_max_type_list.append(0)
+
             # Нахождение следующего максимума после текущего минимума
-            next_extremum = df_vs_turn_points.high.iloc[extremum + 1:lendata].idxmax()
-            entry_type = 'max'
-            trend_interval = (low_id, next_extremum)
+            high_idx_pre = np.argmax(array[extremum_idx + 1 :, 1]) + 1 # индекс следующего глобального максимума
 
-            # Обновление high_id
-            high_id = next_extremum
 
-        # Обновление данных для поиска следующего экстремума на остаточном интервале
-        extremum = next_extremum
-        delta = lendata - extremum
+            high_idx = extremum_idx + high_idx_pre # корректировка индекса
 
-        # Добавление трендового периода, если длина интервала больше или равна 3
-        if len(range(trend_interval[0], trend_interval[1])) >= 3:
-            if entry_type == 'max':
-                trend_intervals_up.append(trend_interval)
-            else:
-                trend_intervals_down.append(trend_interval)
 
-    # Формирование результирующего DataFrame
-    trend_intervals = [('up', interval) for interval in trend_intervals_up] + [('down', interval) for interval in trend_intervals_down]
+            extremum = high_idx
 
-    trend_intervals_data = []
-    for trend_type, interval in trend_intervals:
-        start_interval, end_interval = interval
-        start_time = otohlcvcc_df.loc[start_interval, 'open_time'].date()
-        end_time = otohlcvcc_df.loc[end_interval, 'open_time'].date()
-        time_range = (start_time, end_time)
-        if trend_type == 'up':
-            price_range = (otohlcvcc_df.loc[start_interval, 'low'], otohlcvcc_df.loc[end_interval, 'high'])
-        else:
-            price_range = (otohlcvcc_df.loc[start_interval, 'high'], otohlcvcc_df.loc[end_interval, 'low'])
-        trend_intervals_data.append([trend_type, interval, time_range, price_range])
+        delta = array_lenght - extremum
 
-    trend_intervals_df = pd.DataFrame(trend_intervals_data, columns=['up/down', 'index_range', 'time_range', 'price_range'])
 
-    return trend_intervals_df
+    min_max_index_list_second = min_max_index_list[1:]
+    min_max_index_list.pop()
+    min_max_type_list.pop(0)
+
+    min_max_array = np.array([min_max_index_list, min_max_index_list_second, min_max_type_list], dtype=int).T
+
+    uptrend_intervals_list = []
+    downtrend_intervals_list = []
+
+    for row in min_max_array:
+        start, end, direction = row
+        if end - start >= 3:  # Проверяем, что длина диапазона не меньше 3
+            if direction == 1:
+                uptrend_intervals_list.append([start, end])
+            elif direction == 0:
+                downtrend_intervals_list.append([start, end])
+
+    return [uptrend_intervals_list, downtrend_intervals_list]
 
 
 def point_location(x1, x2, y1, y2, x, y):
@@ -103,9 +101,9 @@ def point_location(x1, x2, y1, y2, x, y):
         return 0   # Точка на прямой
 
 
-def find_uptrendlines_on_interval_vector (tohlcvcc_array, trendinterval_first_idx, trendinterval_last_idx):
+def find_uptrendlines_on_interval (tohlcvcc_array, trendinterval_first_idx, trendinterval_last_idx):
 
-    array = tohlcvcc_array[ trendinterval_first_idx: trendinterval_last_idx, (0,3,7)]
+    array = tohlcvcc_array[trendinterval_first_idx: trendinterval_last_idx, (0,3,7)]
 
     x1 = array[0,0]
     y1 = array[0,1]
@@ -142,7 +140,7 @@ def find_uptrendlines_on_interval_vector (tohlcvcc_array, trendinterval_first_id
 
     return uptrendlines_list
 
-def find_downtrendlines_on_interval_vector (tohlcvcc_array, trendinterval_first_idx, trendinterval_last_idx):
+def find_downtrendlines_on_interval (tohlcvcc_array, trendinterval_first_idx, trendinterval_last_idx):
 
     array = tohlcvcc_array[ trendinterval_first_idx: trendinterval_last_idx, (0,2,7)]
 
@@ -224,11 +222,11 @@ def find_all_trendlines_vector(df):
 
 
     # Получение датафрейма трендовых периодов
-    trend_intervals_df = find_trend_intervals(df)
+    trend_intervals_list = find_trend_intervals(array)
 
     # Определение списков восходящих и нисходящих трендовых интервалов
-    up_intervals_list = trend_intervals_df[trend_intervals_df['up/down'] == 'up']['index_range'].tolist()
-    down_intervals_list = trend_intervals_df[trend_intervals_df['up/down'] == 'down']['index_range'].tolist()
+    up_intervals_list = trend_intervals_list[0]
+    down_intervals_list = trend_intervals_list[1]
 
     def find_all_uptrend_lines(array, uptrend_intervals_list):
         """
@@ -236,7 +234,7 @@ def find_all_trendlines_vector(df):
         """
         uptrendlines_df = pd.DataFrame(columns=['up/down', 'trend_interval', 'first_point_id', 'second_point_id'])
         for uptrend_interval in uptrend_intervals_list:
-            uptrendlines_list = find_uptrendlines_on_interval_vector(array, uptrend_interval[0], uptrend_interval[1])
+            uptrendlines_list = find_uptrendlines_on_interval(array, uptrend_interval[0], uptrend_interval[1])
             if len(uptrendlines_list) > 0:
                 for uptrendline in uptrendlines_list:
                     uptrend_interval_str = str(uptrend_interval)
@@ -264,7 +262,7 @@ def find_all_trendlines_vector(df):
         """
         downtrendlines_df = pd.DataFrame(columns=['up/down', 'trend_interval', 'first_point_id', 'second_point_id'])
         for downtrend_interval in downtrend_intervals_list:
-            downtrendlines_list = find_downtrendlines_on_interval_vector(array, downtrend_interval[0], downtrend_interval[1])
+            downtrendlines_list = find_downtrendlines_on_interval(array, downtrend_interval[0], downtrend_interval[1])
             if len(downtrendlines_list) > 0:
                 for downtrendline in downtrendlines_list:
                     downtrend_interval_str = str(downtrend_interval)
