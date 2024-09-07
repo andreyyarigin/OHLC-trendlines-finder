@@ -6,7 +6,7 @@ import time
 
 from functions import *
 
-df = pd.read_csv('/Users/andreyyarigin/projects/OHLC-trendlines-finder/XRPUSDT_OHLCV_1D.csv', header = None, names = ('timestamp', 'open', 'high', 'low', 'close', 'volume'))
+df = pd.read_csv('/path_to_your_OHLC_file/XRPUSDT_OHLCV_1D.csv', header = None, names = ('timestamp', 'open', 'high', 'low', 'close', 'volume')) # edit path according to your file
 
 df['open_time'] = pd.to_datetime(df['timestamp'], unit='ms')
 df['candle_type'] = df.apply(lambda x: 1 if x['open'] <= x['close'] else 0, axis = 1)
